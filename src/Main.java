@@ -138,7 +138,7 @@ public class Main {
     }
     private static SecretKey generarClaveAES(String clave){
         try {
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("AES");
             KeySpec spec = new PBEKeySpec(clave.toCharArray(), "salt".getBytes(), 60000, 256);
             SecretKey secretKey = factory.generateSecret(spec);
             return secretKey;
@@ -148,7 +148,7 @@ public class Main {
     }
     private static SealedObject cifrarAES(SecretKey clave, Persona p){
         try {
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.ENCRYPT_MODE, clave);
             return new SealedObject(p, cipher);
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IOException |
@@ -158,7 +158,7 @@ public class Main {
     }
     private static Persona descifrarAES(SecretKey clave, SealedObject objetoSellado){
         try {
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
+            Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.DECRYPT_MODE, clave);
             return (Persona) objetoSellado.getObject(clave);
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IOException |
