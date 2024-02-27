@@ -3,14 +3,14 @@ import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Scanner;
 
 public class Main {
     private static String cifradoActual;
+    private static KeyPair clavesRSA;
     private static SealedObject objetoSellado;
     public static void main(String[] args) {
         boolean ejecucion = true;
@@ -28,7 +28,7 @@ public class Main {
             String opcion = userInput.nextLine();
             switch (opcion) {
                 case "1": // Cifrar
-                    System.out.println("\n1- Cifrado DES\n2- Cifrado AES\n");
+                    System.out.println("\n1- Cifrado DES\n2- Cifrado AES\n3- Cifrado RSA\n");
                     System.out.print("Elige una opción: ");
                     String opcionCifrado = userInput.nextLine().strip();
                     switch (opcionCifrado) {
@@ -47,6 +47,13 @@ public class Main {
                             System.out.print("Introduce la clave: ");
                             String claveAES = userInput.nextLine().strip();
                             objetoSellado = cifrarAES(generarClaveAES(claveAES), p);
+                            cifradoActual = "AES";
+                            break;
+                        case "3": // Cifrado RSA
+                            clavesRSA = crearClavesRSA();
+                            PublicKey clavePublica = clavesRSA.getPublic();
+                            objetoSellado = cifrarRSA(p, clavePublica);
+                            cifradoActual = "RSA";
                             break;
                         default:
                             System.out.println("Opción no válida");
@@ -55,9 +62,9 @@ public class Main {
                     break;
                 case "2": // Descifrar
                     if(cifradoActual!=null){
-                        System.out.print("Introduce la clave: ");
-                        String clave = userInput.nextLine().strip();
                         if(cifradoActual.equalsIgnoreCase("DES")){
+                            System.out.print("Introduce la clave: ");
+                            String clave = userInput.nextLine().strip();
                             Cipher cipher = crearDescifradoDES(clave);
                             try {
                                 p = (Persona) objetoSellado.getObject(cipher);
@@ -66,8 +73,14 @@ public class Main {
                                      ClassNotFoundException e) {
                                 System.out.println("Clave errónea");
                             }
-                        } else {
+                        } else if (cifradoActual.equalsIgnoreCase("AES")){
+                            System.out.print("Introduce la clave: ");
+                            String clave = userInput.nextLine().strip();
                             p = descifrarAES(generarClaveAES(clave), objetoSellado);
+                            cifradoActual = null;
+                        } else {
+                            PrivateKey clavePrivada = clavesRSA.getPrivate();
+                            p = descifrarRSA(objetoSellado, clavePrivada);
                             cifradoActual = null;
                         }
                     } else {
@@ -150,6 +163,35 @@ public class Main {
             return (Persona) objetoSellado.getObject(clave);
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IOException |
                  ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static KeyPair crearClavesRSA(){
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2046);
+            return generator.generateKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static SealedObject cifrarRSA(Persona p, PublicKey clavePublica){
+        try {
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, clavePublica);
+            return new SealedObject(p, cipher);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException |
+                 IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static Persona descifrarRSA(SealedObject objetoSellado, PrivateKey clavePrivada){
+        try {
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, clavePrivada);
+            return (Persona) objetoSellado.getObject(cipher);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException |
+                 IOException | BadPaddingException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
